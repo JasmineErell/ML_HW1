@@ -23,12 +23,14 @@ def preprocess(X, y):
     ###########################################################################
     # TODO: Implement the normalization function.                             #
     ###########################################################################
+    print("FIX:")
+    X = pd.DataFrame(X)
+    y = pd.Series(y)
+
     numeric_cols = X.select_dtypes(include=['number']).columns
     for col in numeric_cols:
         X[col] = (X[col] - X[col].min()) / (X[col].max() - X[col].min())
-        print(col)
     y = (y - y.min()) / (y.max() - y.min())
-    print(y)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -89,10 +91,10 @@ def compute_loss(X, y, theta):
     ###########################################################################
     # TODO: Implement the MSE loss function.                                  #
     ###########################################################################
-    n = X.shape[0]  # (rows, cols)
-    for i in range(n):
-        J += (np.dot(X[i], theta) - y[i]) ** 2
-    J = J / (2 * n)
+    n = X.shape[0]
+    predictions = X.dot(theta)
+    errors = predictions - y
+    J = np.sum(errors ** 2) / (2 * n)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -125,20 +127,28 @@ def gradient_descent(X, y, theta, eta, num_iters):
     ###########################################################################
     # TODO: Implement the gradient descent optimization algorithm.            #
     ###########################################################################
-    for it in range(num_iters):
-        gradients = []
-        n = X.shape[0]
+    n = X.shape[0]
+    for _ in range(num_iters):
+        prediction = X @ theta
+        errors = prediction - y
+        gradients = (X.T @ errors) / n
 
-        for j in range(len(theta)):
-            gradient = 0  # this gradeint is the derrivative of the loss function in respect to the jth parameter
-            for i in range(n):
-                prediction = np.dot(X[i], theta)
-                error = prediction - y[i]
-                gradient += error * X[i][j]  # X[i][j] is the inner derivative in respect to theta j
-            gradients.append(gradient / n)
+        theta -= eta * gradients
 
-        theta = theta - eta * np.array(gradients)
-        J_history.append(compute_loss(X, y, theta))
+        # Check if theta has diverged
+        if np.any(np.isnan(theta)) or np.any(np.isinf(theta)):
+            print(f"⚠️ Theta diverged at eta={eta}")
+            break
+
+        loss = compute_loss(X, y, theta)
+
+        # Check if loss is invalid BEFORE using it
+        if np.isnan(loss) or np.isinf(loss) or loss > 1e10:
+            print(f"⚠️ Loss diverged: {loss} at eta={eta}")
+            break
+
+        J_history.append(loss)
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -161,12 +171,13 @@ def compute_pinv(X, y):
     Returns:
     - pinv_theta: The optimal parameters of your model.
     """
-
     pinv_theta = []
     ###########################################################################
     # TODO: Implement the pseudoinverse algorithm.                            #
     ###########################################################################
-    pass
+    X_T_X = X.T @ X
+    X_T_y = X.T @ y
+    pinv_theta = np.linalg.inv(X_T_X) @ X_T_y
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -197,7 +208,36 @@ def gradient_descent_stop_condition(X, y, theta, eta, max_iter, epsilon=1e-8):
     ###########################################################################
     # TODO: Implement the gradient descent with stop condition optimization algorithm.  #
     ###########################################################################
-    pass
+    print("START GDC")
+    n = X.shape[0]
+    for _ in range(max_iter):
+        prediction = X @ theta
+        errors = prediction - y
+        gradients = (X.T @ errors) / n
+
+        theta -= eta * gradients
+
+        # Check if theta has diverged
+        if np.any(np.isnan(theta)) or np.any(np.isinf(theta)):
+            print(f"⚠️ Theta diverged at eta={eta}")
+            break
+
+        loss = compute_loss(X, y, theta)
+
+        # Check if loss is invalid BEFORE using it
+        if np.isnan(loss) or np.isinf(loss) or loss > 1e10:
+            print(f"⚠️ Loss diverged: {loss} at eta={eta}")
+            break
+
+        # Check improvement only if safe
+        if J_history:
+            prev_loss = J_history[-1]
+            if not (np.isnan(prev_loss) or np.isinf(prev_loss)):
+                if abs(prev_loss - loss) < epsilon:
+                    J_history.append(loss)
+                    break
+
+        J_history.append(loss)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -219,18 +259,26 @@ def find_best_learning_rate(X_train, y_train, X_val, y_val, iterations):
     Returns:
     - eta_dict: A python dictionary - {eta_value : validation_loss}
     """
+    print("START Best Learning Rate - after fix without stop")
 
     etas = [0.00001, 0.00003, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 2, 3]
     eta_dict = {}  # {eta_value: validation_loss}
     ###########################################################################
-    # TODO: Implement the function and find the best eta value.             #
+    # TODO: Implement the function and find the best eta value.
     ###########################################################################
-    pass
+    for eta in etas:
+        print(f"Processing: {eta}")
+        theta = np.random.random(size=X_train.shape[1])
+        print(theta.shape)
+        # theta, J_history = gradient_descent_stop_condition(X_train, y_train, theta, eta, iterations)
+        theta, J_history = gradient_descent(X_train, y_train, theta, eta, iterations)
+        val_loss = compute_loss(X_val, y_val, theta)
+        eta_dict[eta] = val_loss
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return eta_dict
-
 
 def forward_feature_selection(X_train, y_train, X_val, y_val, best_eta, iterations):
     """
