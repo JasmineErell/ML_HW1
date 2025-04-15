@@ -23,24 +23,18 @@ def preprocess(X, y):
     ###########################################################################
     # TODO: Implement the normalization function.                             #
     ###########################################################################
-    print("FIX:")
-    X = pd.DataFrame(X)
-    y = pd.Series(y)
+    # X = pd.DataFrame(X)
+    # y = pd.Series(y)
 
-    numeric_cols = X.select_dtypes(include=['number']).columns
-    for col in numeric_cols:
-        X[col] = (X[col] - X[col].min()) / (X[col].max() - X[col].min())
-    y = (y - y.min()) / (y.max() - y.min())
+    print('Starting standardization...')
+    print('X.shape:', X.shape)
+    X = (X - X.mean()) / X.std(ddof=0)
+    y = (y - y.mean()) / y.std(ddof=0)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return X, y
 
-
-df = pd.read_csv('data.csv')
-X = df.iloc[:, :-1]  # All columns except the last
-y = df.iloc[:, -1]  # Last column (labels)
-preprocess(X, y)
 
 
 def apply_bias_trick(X):
@@ -57,20 +51,14 @@ def apply_bias_trick(X):
     ###########################################################################
     # TODO: Implement the bias trick by adding a column of ones to the data.                             #
     ###########################################################################
-    new_col = np.ones((X.shape[0], 1))
-    X.insert(loc=0, column='bias', value=new_col)
-    return X
+    X = np.asarray(X)
+    # np.c_ will treat 1D arrays as column vectors automatically.
+    X = np.c_[np.ones(X.shape[0]), X]
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return X
 
-
-df = pd.read_csv('data.csv')
-X = df.iloc[:, :-1]  # All columns except the last
-y = df.iloc[:, -1]  # Last column (labels)
-new = apply_bias_trick(X)
-print(new.columns)
 
 
 def compute_loss(X, y, theta):
@@ -121,7 +109,7 @@ def gradient_descent(X, y, theta, eta, num_iters):
     - theta: The learned parameters of your model.
     - J_history: the loss value for every iteration.
     """
-
+    print("Start Gradient Descent")
     theta = theta.copy()  # optional: theta outside the function will not change
     J_history = []  # Use a python list to save the loss value in every iteration
     ###########################################################################
@@ -136,16 +124,16 @@ def gradient_descent(X, y, theta, eta, num_iters):
         theta -= eta * gradients
 
         # Check if theta has diverged
-        if np.any(np.isnan(theta)) or np.any(np.isinf(theta)):
-            print(f"⚠️ Theta diverged at eta={eta}")
-            break
+        # if np.any(np.isnan(theta)) or np.any(np.isinf(theta)):
+        #     print(f"Theta diverged at eta={eta}")
+        #     break
 
         loss = compute_loss(X, y, theta)
 
         # Check if loss is invalid BEFORE using it
-        if np.isnan(loss) or np.isinf(loss) or loss > 1e10:
-            print(f"⚠️ Loss diverged: {loss} at eta={eta}")
-            break
+        # if np.isnan(loss) or np.isinf(loss) or loss > 1e10:
+        #     print(f"Loss diverged: {loss} at eta={eta}")
+        #     break
 
         J_history.append(loss)
 
@@ -208,34 +196,24 @@ def gradient_descent_stop_condition(X, y, theta, eta, max_iter, epsilon=1e-8):
     ###########################################################################
     # TODO: Implement the gradient descent with stop condition optimization algorithm.  #
     ###########################################################################
-    print("START GDC")
+    print("START GDC wit stop condition")
     n = X.shape[0]
     for _ in range(max_iter):
-        prediction = X @ theta
-        errors = prediction - y
+        predictions = X @ theta
+        errors = predictions - y
         gradients = (X.T @ errors) / n
 
-        theta -= eta * gradients
-
-        # Check if theta has diverged
-        if np.any(np.isnan(theta)) or np.any(np.isinf(theta)):
-            print(f"⚠️ Theta diverged at eta={eta}")
-            break
+        theta = theta - eta * gradients
 
         loss = compute_loss(X, y, theta)
 
-        # Check if loss is invalid BEFORE using it
-        if np.isnan(loss) or np.isinf(loss) or loss > 1e10:
-            print(f"⚠️ Loss diverged: {loss} at eta={eta}")
-            break
+        # if np.any(np.isnan(theta)) or np.any(np.isinf(theta)) or np.isnan(loss) or np.isinf(loss) or loss > 1e10:
+        #     break
 
-        # Check improvement only if safe
-        if J_history:
-            prev_loss = J_history[-1]
-            if not (np.isnan(prev_loss) or np.isinf(prev_loss)):
-                if abs(prev_loss - loss) < epsilon:
-                    J_history.append(loss)
-                    break
+        # Stop if the improvement is smaller than epsilon
+        if J_history and abs(J_history[-1] - loss) < epsilon:
+            J_history.append(loss)
+            break
 
         J_history.append(loss)
     ###########################################################################
@@ -259,8 +237,6 @@ def find_best_learning_rate(X_train, y_train, X_val, y_val, iterations):
     Returns:
     - eta_dict: A python dictionary - {eta_value : validation_loss}
     """
-    print("START Best Learning Rate - after fix without stop")
-
     etas = [0.00001, 0.00003, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 2, 3]
     eta_dict = {}  # {eta_value: validation_loss}
     ###########################################################################
@@ -268,8 +244,9 @@ def find_best_learning_rate(X_train, y_train, X_val, y_val, iterations):
     ###########################################################################
     for eta in etas:
         print(f"Processing: {eta}")
+        print("Setting random seed to 42")
+        np.random.seed(42)
         theta = np.random.random(size=X_train.shape[1])
-        print(theta.shape)
         # theta, J_history = gradient_descent_stop_condition(X_train, y_train, theta, eta, iterations)
         theta, J_history = gradient_descent(X_train, y_train, theta, eta, iterations)
         val_loss = compute_loss(X_val, y_val, theta)
