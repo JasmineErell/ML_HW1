@@ -26,10 +26,15 @@ def preprocess(X, y):
     # X = pd.DataFrame(X)
     # y = pd.Series(y)
 
-    print('Starting standardization...')
-    print('X.shape:', X.shape)
-    X = (X - X.mean()) / X.std(ddof=0)
-    y = (y - y.mean()) / y.std(ddof=0)
+    X_mean = np.mean(X, axis=0)
+    X_std = np.std(X, axis=0, ddof=0)
+    X = (X - X_mean) / X_std
+
+    # Compute the mean and standard deviation for the target variable y
+    y_mean = np.mean(y)
+    y_std = np.std(y, ddof=0)
+    y = (y - y_mean) / y_std
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -109,7 +114,6 @@ def gradient_descent(X, y, theta, eta, num_iters):
     - theta: The learned parameters of your model.
     - J_history: the loss value for every iteration.
     """
-    print("Start Gradient Descent")
     theta = theta.copy()  # optional: theta outside the function will not change
     J_history = []  # Use a python list to save the loss value in every iteration
     ###########################################################################
@@ -196,7 +200,6 @@ def gradient_descent_stop_condition(X, y, theta, eta, max_iter, epsilon=1e-8):
     ###########################################################################
     # TODO: Implement the gradient descent with stop condition optimization algorithm.  #
     ###########################################################################
-    print("START GDC wit stop condition")
     n = X.shape[0]
     for _ in range(max_iter):
         predictions = X @ theta
@@ -242,12 +245,10 @@ def find_best_learning_rate(X_train, y_train, X_val, y_val, iterations):
     ###########################################################################
     # TODO: Implement the function and find the best eta value.
     ###########################################################################
+    np.random.seed(42)
     for eta in etas:
         print(f"Processing: {eta}")
-        print("Setting random seed to 42")
-        np.random.seed(42)
         theta = np.random.random(size=X_train.shape[1])
-        # theta, J_history = gradient_descent_stop_condition(X_train, y_train, theta, eta, iterations)
         theta, J_history = gradient_descent(X_train, y_train, theta, eta, iterations)
         val_loss = compute_loss(X_val, y_val, theta)
         eta_dict[eta] = val_loss
@@ -276,10 +277,28 @@ def forward_feature_selection(X_train, y_train, X_val, y_val, best_eta, iteratio
     - selected_features: A list of selected top 5 feature indices
     """
     selected_features = []
-    #####c######################################################################
+    ###########################################################################
     # TODO: Implement the function and find the best eta value.             #
     ###########################################################################
-    pass
+
+    features = list(range(X_train.shape[1]))
+    np.random.seed(42)
+
+    for i in range(5):
+        loss_dic = {}
+        for feature in features:
+            if feature not in selected_features:
+                feature_cols = selected_features + [feature]
+
+                X_train_features = X_train[:, feature_cols]
+                X_val_features = X_val[:, feature_cols]
+
+                theta = np.random.random(size=X_train_features.shape[1])
+                theta, _ = gradient_descent_stop_condition(X_train_features, y_train, theta, eta=best_eta, max_iter=iterations)
+                loss_dic[feature] = compute_loss(X_val_features, y_val, theta)
+
+        best_feature = min(loss_dic, key=loss_dic.get)
+        selected_features.append(best_feature)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -302,7 +321,18 @@ def create_square_features(df):
     ###########################################################################
     # TODO: Implement the function to add polynomial features                 #
     ###########################################################################
-    pass
+    new_features = {}
+    columns = df.columns
+
+    for col in columns:
+        new_features[f'{col}^2'] = df[col] ** 2
+
+    for i in range(len(columns)):
+        for j in range(i + 1, len(columns)):
+            col1, col2 = columns[i], columns[j]
+            new_features[f'{col1}*{col2}'] = df[col1] * df[col2]
+
+    df_poly = pd.concat([df, pd.DataFrame(new_features)], axis=1)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
