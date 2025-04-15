@@ -20,24 +20,8 @@ def preprocess(X, y):
     - X: The Standardized input data.
     - y: The Standardized true labels.
     """
-    ###########################################################################
-    # TODO: Implement the normalization function.                             #
-    ###########################################################################
-    # X = pd.DataFrame(X)
-    # y = pd.Series(y)
-
-    X_mean = np.mean(X, axis=0)
-    X_std = np.std(X, axis=0, ddof=0)
-    X = (X - X_mean) / X_std
-
-    # Compute the mean and standard deviation for the target variable y
-    y_mean = np.mean(y)
-    y_std = np.std(y, ddof=0)
-    y = (y - y_mean) / y_std
-
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    X = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
+    y = (y - np.mean(y)) / np.std(y)
     return X, y
 
 
@@ -245,17 +229,11 @@ def find_best_learning_rate(X_train, y_train, X_val, y_val, iterations):
     ###########################################################################
     # TODO: Implement the function and find the best eta value.
     ###########################################################################
-    np.random.seed(42)
     for eta in etas:
-        print(f"Processing: {eta}")
-        theta = np.random.random(size=X_train.shape[1])
+        theta = np.zeros(X_train.shape[1])
         theta, J_history = gradient_descent(X_train, y_train, theta, eta, iterations)
         val_loss = compute_loss(X_val, y_val, theta)
         eta_dict[eta] = val_loss
-
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
     return eta_dict
 
 def forward_feature_selection(X_train, y_train, X_val, y_val, best_eta, iterations):
@@ -281,8 +259,9 @@ def forward_feature_selection(X_train, y_train, X_val, y_val, best_eta, iteratio
     # TODO: Implement the function and find the best eta value.             #
     ###########################################################################
 
+
     features = list(range(X_train.shape[1]))
-    np.random.seed(42)
+    print("TESTINGMYSELF")
 
     for i in range(5):
         loss_dic = {}
@@ -293,7 +272,7 @@ def forward_feature_selection(X_train, y_train, X_val, y_val, best_eta, iteratio
                 X_train_features = X_train[:, feature_cols]
                 X_val_features = X_val[:, feature_cols]
 
-                theta = np.random.random(size=X_train_features.shape[1])
+                theta = np.zeros(X_train_features.shape[1])
                 theta, _ = gradient_descent_stop_condition(X_train_features, y_train, theta, eta=best_eta, max_iter=iterations)
                 loss_dic[feature] = compute_loss(X_val_features, y_val, theta)
 
