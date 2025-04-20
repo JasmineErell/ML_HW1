@@ -233,7 +233,8 @@ def find_best_learning_rate(X_train, y_train, X_val, y_val, iterations):
         theta = np.zeros(X_train.shape[1])
         theta, J_history = gradient_descent(X_train, y_train, theta, eta, iterations)
         val_loss = compute_loss(X_val, y_val, theta)
-        eta_dict[eta] = val_loss
+        if np.isfinite(val_loss):
+            eta_dict[eta] = val_loss
     return eta_dict
 
 def forward_feature_selection(X_train, y_train, X_val, y_val, best_eta, iterations):
@@ -259,29 +260,33 @@ def forward_feature_selection(X_train, y_train, X_val, y_val, best_eta, iteratio
     # TODO: Implement the function and find the best eta value.             #
     ###########################################################################
 
-
-    features = list(range(X_train.shape[1]))
-    print("TESTINGMYSELF")
+    number_of_features = X_train.shape[1]
+    np.random.seed(42)
+    rand_theta = np.random.rand(6)
 
     for i in range(5):
-        loss_dic = {}
-        for feature in features:
-            if feature not in selected_features:
-                feature_cols = selected_features + [feature]
+        feature_loss_dic = {}
+        for feature in range(number_of_features):
+            if feature in selected_features:
+                continue
+            candidates = selected_features + [feature]
+            X_train_feature = apply_bias_trick(X_train[:, candidates])
+            X_val_feature = apply_bias_trick(X_val[:, candidates])
 
-                X_train_features = X_train[:, feature_cols]
-                X_val_features = X_val[:, feature_cols]
+            # theta = np.zeros(X_train_feature.shape[1])
+            initial_theta = rand_theta[:len(candidates) + 1]
+            new_theta, J_history = gradient_descent_stop_condition(
+                X_train_feature, y_train, initial_theta, eta=best_eta, max_iter=iterations
+            )
 
-                theta = np.zeros(X_train_features.shape[1])
-                theta, _ = gradient_descent_stop_condition(X_train_features, y_train, theta, eta=best_eta, max_iter=iterations)
-                loss_dic[feature] = compute_loss(X_val_features, y_val, theta)
-
-        best_feature = min(loss_dic, key=loss_dic.get)
-        selected_features.append(best_feature)
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+            val_loss = compute_loss(X_val_feature, y_val, new_theta)
+            feature_loss_dic[feature] = val_loss
+        best_feature_index = min(feature_loss_dic, key=feature_loss_dic.get)
+        selected_features.append(best_feature_index)
     return selected_features
+
+
+
 
 
 def create_square_features(df):
