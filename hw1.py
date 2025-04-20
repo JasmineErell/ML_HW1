@@ -111,17 +111,11 @@ def gradient_descent(X, y, theta, eta, num_iters):
 
         theta -= eta * gradients
 
-        # Check if theta has diverged
-        # if np.any(np.isnan(theta)) or np.any(np.isinf(theta)):
-        #     print(f"Theta diverged at eta={eta}")
-        #     break
-
         loss = compute_loss(X, y, theta)
 
-        # Check if loss is invalid BEFORE using it
-        # if np.isnan(loss) or np.isinf(loss) or loss > 1e10:
-        #     print(f"Loss diverged: {loss} at eta={eta}")
-        #     break
+        # Stop if the loss is invalid (nan, inf, or extremely large)
+        if not np.isfinite(loss) or loss > 1e10:
+            break
 
         J_history.append(loss)
 
