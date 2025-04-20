@@ -41,7 +41,6 @@ def apply_bias_trick(X):
     # TODO: Implement the bias trick by adding a column of ones to the data.                             #
     ###########################################################################
     X = np.asarray(X)
-    # np.c_ will treat 1D arrays as column vectors automatically.
     X = np.c_[np.ones(X.shape[0]), X]
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -113,7 +112,7 @@ def gradient_descent(X, y, theta, eta, num_iters):
 
         loss = compute_loss(X, y, theta)
 
-        # Stop if the loss is invalid (nan, inf, or extremely large)
+        # Stop if loss is too large - prevents overflow
         if not np.isfinite(loss) or loss > 1e10:
             break
 
@@ -187,9 +186,6 @@ def gradient_descent_stop_condition(X, y, theta, eta, max_iter, epsilon=1e-8):
         theta = theta - eta * gradients
 
         loss = compute_loss(X, y, theta)
-
-        # if np.any(np.isnan(theta)) or np.any(np.isinf(theta)) or np.isnan(loss) or np.isinf(loss) or loss > 1e10:
-        #     break
 
         # Stop if the improvement is smaller than epsilon
         if J_history and abs(J_history[-1] - loss) < epsilon:
